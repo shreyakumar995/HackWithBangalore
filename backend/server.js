@@ -71,8 +71,10 @@ You MUST follow this exact scoring rubric:
 - +20 points: Ad focuses on actual daily responsibilities, tech stack, learning outcomes
 - 0 points: Ad uses FOMO tactics ("Only 5 spots left!", "Limited time offer!") or promises "100% Guaranteed Placement", "Certificate Guaranteed", or similar unrealistic guarantees
 
-## CRITICAL RED FLAG RULE
-If ANY of these Critical Red Flags are detected, the FINAL SCORE MUST BE CAPPED AT 30/100 regardless of other positive signals:
+## CRITICAL RED FLAG DETECTION
+Score each of the four pillars independently and honestly, based only on that pillar's own criteria — do not let a flag in one pillar affect another pillar's score. A company can have a verifiable digital presence or a proper interview process even while charging suspicious fees.
+
+Separately, after scoring, check whether ANY of these Critical Red Flags are present, and report this as a boolean:
 - Student is asked to PAY money/fees
 - "100% Guaranteed Placement" promises
 - No verifiable company identity
@@ -80,7 +82,7 @@ If ANY of these Critical Red Flags are detected, the FINAL SCORE MUST BE CAPPED 
 
 ## OUTPUT FORMAT
 You MUST return ONLY a valid JSON object with NO additional text, NO markdown formatting, NO code blocks. Just the raw JSON:
-{"score": <number 0-100>, "verdict": "<one of: LEGITIMATE, SUSPICIOUS, LIKELY SCAM, DEFINITE SCAM>", "pillar_scores": {"financial_structure": {"score": <number>, "max": 35, "details": "<brief explanation>"}, "digital_footprint": {"score": <number>, "max": 25, "details": "<brief explanation>"}, "recruitment_process": {"score": <number>, "max": 20, "details": "<brief explanation>"}, "marketing_substance": {"score": <number>, "max": 20, "details": "<brief explanation>"}}, "green_flags": ["<array of positive indicators found>"], "red_flags": ["<array of negative indicators found>"], "recommendation": "<2-3 sentence actionable advice for the student>"}
+{"score": <number 0-100>, "verdict": "<one of: LEGITIMATE, SUSPICIOUS, LIKELY SCAM, DEFINITE SCAM>", "critical_flag_detected": <true or false>, "pillar_scores": {"financial_structure": {"score": <number>, "max": 35, "details": "<brief explanation>"}, "digital_footprint": {"score": <number>, "max": 25, "details": "<brief explanation>"}, "recruitment_process": {"score": <number>, "max": 20, "details": "<brief explanation>"}, "marketing_substance": {"score": <number>, "max": 20, "details": "<brief explanation>"}}, "green_flags": ["<array of positive indicators found>"], "red_flags": ["<array of negative indicators found>"], "recommendation": "<2-3 sentence actionable advice for the student>"}
 
 VERDICT THRESHOLDS:
 - 71-100: LEGITIMATE
@@ -137,8 +139,7 @@ app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
     if (uploadedFiles.length > 0) {
       userMessage += `## Screenshots Provided:\n${uploadedFiles.length} screenshot(s) were uploaded showing the internship advertisement/email.\n`;
       userMessage += 'Note: The screenshots have been provided for context. Analyze any visible text, branding, contact information, and claims made in them.\n\n';
-      
-      // Read image contents and describe them in the prompt since llama3-70b is text-only
+
       for (let i = 0; i < uploadedFiles.length; i++) {
         userMessage += `[Screenshot ${i + 1}: ${uploadedFiles[i].originalname}]\n`;
       }
@@ -152,7 +153,7 @@ app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       temperature: 0.3,
       max_tokens: 2048,
       top_p: 0.9,
@@ -167,7 +168,6 @@ app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
     // Parse the JSON response
     let result;
     try {
-      // Try to extract JSON from the response (handle potential markdown wrapping)
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         result = JSON.parse(jsonMatch[0]);
@@ -180,12 +180,26 @@ app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
     }
 
     // Validate the result structure
-    if (typeof result.score !== 'number' || !result.verdict) {
+    if (!result.verdict || !result.pillar_scores) {
       throw new Error('Invalid response structure from AI');
     }
 
-    // Ensure score is within bounds
-    result.score = Math.max(0, Math.min(100, Math.round(result.score)));
+    // Calculate the real score ourselves from the pillar breakdown,
+    // rather than trusting the LLM's self-reported total score.
+    // This makes the critical-flag cap deterministic instead of
+    // depending on the LLM correctly applying a multi-part instruction.
+    const pillarSum =
+      (result.pillar_scores?.financial_structure?.score || 0) +
+      (result.pillar_scores?.digital_footprint?.score || 0) +
+      (result.pillar_scores?.recruitment_process?.score || 0) +
+      (result.pillar_scores?.marketing_substance?.score || 0);
+
+    let finalScore = pillarSum;
+    if (result.critical_flag_detected) {
+      finalScore = Math.min(finalScore, 30);
+    }
+
+    result.score = Math.max(0, Math.min(100, Math.round(finalScore)));
 
     res.json({
       success: true,
@@ -194,7 +208,6 @@ app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
   } catch (error) {
     console.error('Evaluation error:', error);
 
-    // Handle specific error types
     if (error.message?.includes('API key')) {
       return res.status(401).json({ error: 'Invalid or missing Groq API key.' });
     }
