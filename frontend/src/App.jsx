@@ -481,6 +481,80 @@ export default function App() {
                   </div>
                 )}
 
+                                {/* Domain Verification */}
+                                {result.domain_verification && (
+                  <div style={{ ...card, padding:'28px 36px' }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingBottom:18, borderBottom:'1px solid rgba(255,255,255,0.06)', marginBottom:22 }}>
+                      <p style={{ fontSize:10, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.1em', margin:0 }}>Domain Verification</p>
+                      <span style={{ fontSize:9, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#64748b', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', padding:'2px 8px', borderRadius:6 }}>WHOIS Lookup</span>
+                    </div>
+                    {(() => {
+                      const dv = result.domain_verification;
+                      const verified = dv.checked && dv.ageInDays !== null;
+                      const years = verified ? Math.floor(dv.ageInDays / 365) : null;
+                      const vColor = !verified ? '#ef4444' : dv.ageInDays < 30 ? '#ef4444' : dv.ageInDays < 180 ? '#f59e0b' : '#10b981';
+                      const vBg = !verified ? 'rgba(239,68,68,0.08)' : dv.ageInDays < 30 ? 'rgba(239,68,68,0.08)' : dv.ageInDays < 180 ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)';
+                      const vBorder = !verified ? 'rgba(239,68,68,0.2)' : dv.ageInDays < 30 ? 'rgba(239,68,68,0.2)' : dv.ageInDays < 180 ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)';
+                      return (
+                        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
+                            <span style={{ fontSize:13, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#f1f5f9' }}>{dv.domain}</span>
+                            <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'4px 12px', borderRadius:999, fontSize:10, fontWeight:700, letterSpacing:'0.06em', background:vBg, border:`1px solid ${vBorder}`, color:vColor }}>
+                              {verified ? `${dv.ageInDays} days old${years > 0 ? ` (~${years} yr)` : ''}` : 'Unverifiable'}
+                            </span>
+                          </div>
+                          <p style={{ fontSize:12, color:'#94a3b8', margin:0, lineHeight:1.7 }}>
+                            {verified
+                              ? dv.ageInDays < 30
+                                ? 'This domain was registered extremely recently — a strong, independent indicator of a freshly created scam operation.'
+                                : dv.ageInDays < 180
+                                ? 'This domain is relatively new. Not conclusive on its own, but worth factoring in alongside other signals.'
+                                : 'This domain has existed for a significant amount of time, consistent with a genuinely established business.'
+                              : `We could not confirm this domain genuinely exists via a live WHOIS lookup${dv.error ? ` (${dv.error})` : ''}. Treat this as its own red flag — a legitimate company's domain should be verifiable.`}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* Flags */}
+                {(result.red_flags?.length > 0 || result.green_flags?.length > 0) && (
+                  <div style={{ ...card, padding:'28px 36px' }}>
+                    <div style={{ paddingBottom:18, borderBottom:'1px solid rgba(255,255,255,0.06)', marginBottom:22 }}>
+                      <p style={{ fontSize:10, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.1em', margin:0 }}>Detected Indicators</p>
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+                      {result.red_flags?.length > 0 && (
+                        <div>
+                          <p style={{ fontSize:11, fontWeight:700, color:'#ef4444', textTransform:'uppercase', letterSpacing:'0.06em', margin:'0 0 10px' }}>Red Flags</p>
+                          <ul style={{ margin:0, padding:0, listStyle:'none', display:'flex', flexDirection:'column', gap:8 }}>
+                            {result.red_flags.map((flag, i) => (
+                              <li key={i} style={{ display:'flex', gap:10, alignItems:'flex-start', fontSize:12, color:'#94a3b8', lineHeight:1.6 }}>
+                                <span style={{ color:'#ef4444', flexShrink:0, marginTop:5, fontSize:7 }}>●</span>
+                                {flag}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {result.green_flags?.length > 0 && (
+                        <div>
+                          <p style={{ fontSize:11, fontWeight:700, color:'#10b981', textTransform:'uppercase', letterSpacing:'0.06em', margin:'0 0 10px' }}>Green Flags</p>
+                          <ul style={{ margin:0, padding:0, listStyle:'none', display:'flex', flexDirection:'column', gap:8 }}>
+                            {result.green_flags.map((flag, i) => (
+                              <li key={i} style={{ display:'flex', gap:10, alignItems:'flex-start', fontSize:12, color:'#94a3b8', lineHeight:1.6 }}>
+                                <span style={{ color:'#10b981', flexShrink:0, marginTop:5, fontSize:7 }}>●</span>
+                                {flag}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Guidelines */}
                 <div style={{ ...card, padding:'28px 36px' }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingBottom:18, borderBottom:'1px solid rgba(255,255,255,0.06)', marginBottom:22 }}>

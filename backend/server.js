@@ -5,6 +5,7 @@ const multer = require('multer');
 const Groq = require('groq-sdk');
 const path = require('path');
 const fs = require('fs');
+const whois = require('whois-json');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -80,9 +81,12 @@ Separately, after scoring, check whether ANY of these Critical Red Flags are pre
 - No verifiable company identity
 - Mass WhatsApp/Telegram recruitment
 
+## DOMAIN EXTRACTION
+Extract the company's email domain if a contact email is mentioned anywhere in the text (e.g. "careers@brightwavemedia.in" -> "brightwavemedia.in"). If the contact is a personal domain like gmail.com, yahoo.com, outlook.com, or hotmail.com, OR if no email is mentioned at all, set this field to null — we only want to verify genuine company domains.
+
 ## OUTPUT FORMAT
 You MUST return ONLY a valid JSON object with NO additional text, NO markdown formatting, NO code blocks. Just the raw JSON:
-{"score": <number 0-100>, "verdict": "<one of: LEGITIMATE, SUSPICIOUS, LIKELY SCAM, DEFINITE SCAM>", "critical_flag_detected": <true or false>, "pillar_scores": {"financial_structure": {"score": <number>, "max": 35, "details": "<brief explanation>"}, "digital_footprint": {"score": <number>, "max": 25, "details": "<brief explanation>"}, "recruitment_process": {"score": <number>, "max": 20, "details": "<brief explanation>"}, "marketing_substance": {"score": <number>, "max": 20, "details": "<brief explanation>"}}, "green_flags": ["<array of positive indicators found>"], "red_flags": ["<array of negative indicators found>"], "recommendation": "<2-3 sentence actionable advice for the student>"}
+{"score": <number 0-100>, "verdict": "<one of: LEGITIMATE, SUSPICIOUS, LIKELY SCAM, DEFINITE SCAM>", "critical_flag_detected": <true or false>, "company_domain": "<extracted domain or null>", "pillar_scores": {"financial_structure": {"score": <number>, "max": 35, "details": "<brief explanation>"}, "digital_footprint": {"score": <number>, "max": 25, "details": "<brief explanation>"}, "recruitment_process": {"score": <number>, "max": 20, "details": "<brief explanation>"}, "marketing_substance": {"score": <number>, "max": 20, "details": "<brief explanation>"}}, "green_flags": ["<array of positive indicators found>"], "red_flags": ["<array of negative indicators found>"], "recommendation": "<2-3 sentence actionable advice for the student>"}
 
 VERDICT THRESHOLDS:
 - 71-100: LEGITIMATE
@@ -108,6 +112,30 @@ function cleanupFiles(files) {
 function imageToBase64(filePath) {
   const data = fs.readFileSync(filePath);
   return data.toString('base64');
+}
+
+// Helper: run a real WHOIS lookup on a domain and return age info.
+// Returns null if the lookup fails or the domain has no readable creation date,
+// so callers can distinguish "checked and it's fine" from "couldn't check."
+async function checkDomainAge(domain) {
+  try {
+    const data = await whois(domain);
+    const creationDateRaw = data.creationDate || data.createdDate || data.registrationDate;
+
+    if (!creationDateRaw) {
+      return { domain, checked: true, ageInDays: null, error: 'No creation date found in WHOIS record' };
+    }
+
+    const createdAt = new Date(creationDateRaw);
+    if (isNaN(createdAt.getTime())) {
+      return { domain, checked: true, ageInDays: null, error: 'Could not parse creation date' };
+    }
+
+    const ageInDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    return { domain, checked: true, ageInDays, error: null };
+  } catch (e) {
+    return { domain, checked: false, ageInDays: null, error: e.message };
+  }
 }
 
 // Main evaluation endpoint
@@ -182,6 +210,44 @@ app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
     // Validate the result structure
     if (!result.verdict || !result.pillar_scores) {
       throw new Error('Invalid response structure from AI');
+    }
+
+    // --- REAL-WORLD VERIFICATION STEP ---
+    // If the AI extracted a genuine company domain, actually check it via WHOIS.
+    // This is the step that makes the system agentic (taking a real action on
+    // real-world data) rather than just reasoning over the text it was given.
+    result.domain_verification = null;
+    if (result.company_domain) {
+      const domainCheck = await checkDomainAge(result.company_domain);
+      result.domain_verification = domainCheck;
+
+      // A domain registered very recently is a strong, objective scam signal
+      // that the LLM has no way to know from text alone.
+      if (domainCheck.checked && domainCheck.ageInDays !== null) {
+        if (domainCheck.ageInDays < 30) {
+          result.red_flags = result.red_flags || [];
+          result.red_flags.push(
+            `Company domain "${domainCheck.domain}" was registered only ${domainCheck.ageInDays} day(s) ago — extremely new domains are a strong scam indicator.`
+          );
+          result.critical_flag_detected = true;
+        } else if (domainCheck.ageInDays < 180) {
+          result.red_flags = result.red_flags || [];
+          result.red_flags.push(
+            `Company domain "${domainCheck.domain}" was registered ${domainCheck.ageInDays} days ago — a relatively new domain for a company claiming to be established.`
+          );
+        } else {
+          result.green_flags = result.green_flags || [];
+          result.green_flags.push(
+            `Company domain "${domainCheck.domain}" has existed for over ${Math.floor(domainCheck.ageInDays / 365)} year(s), consistent with a genuine, established business.`
+          );
+        }
+      }else{
+        result.red_flags = result.red_flags || [];
+        result.red_flags.push(
+          `Company domain "${result.company_domain}" could not be verified via WHOIS (${domainCheck.error || 'no record found'}) — this may indicate the domain doesn't genuinely exist.`
+        );
+        result.critical_flag_detected = true;
+      }
     }
 
     // Calculate the real score ourselves from the pillar breakdown,
