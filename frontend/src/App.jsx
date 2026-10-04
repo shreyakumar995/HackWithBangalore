@@ -92,6 +92,13 @@ export default function App() {
   const [drag, setDrag]             = useState(false);
   const inputRef = useRef(null);
 
+  // ── Batch mode state ──
+  const [mode, setMode]             = useState('single'); // 'single' or 'batch'
+  const [batchText, setBatchText]   = useState('');
+  const [batchResults, setBatchResults] = useState(null);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchError, setBatchError] = useState('');
+
   const onDrag    = useCallback(e => { e.preventDefault(); e.stopPropagation(); }, []);
   const onDragIn  = useCallback(e => { e.preventDefault(); e.stopPropagation(); setDrag(true);  }, []);
   const onDragOut = useCallback(e => { e.preventDefault(); e.stopPropagation(); setDrag(false); }, []);
@@ -121,6 +128,21 @@ export default function App() {
   };
 
   const reset = () => { setFiles([]); setText(''); setResult(null); setError(''); };
+
+  // ── Batch mode functions ──
+  const analyzeBatch = async () => {
+    if (!batchText.trim()) { setBatchError('Please paste the bulk text to analyze.'); return; }
+    setBatchLoading(true); setBatchError(''); setBatchResults(null);
+    try {
+      const res = await axios.post('/api/evaluate-batch', { textContent: batchText }, { timeout: 180000 });
+      if (res.data.success) setBatchResults(res.data);
+      else setBatchError(res.data.error || 'Batch audit failed. Please try again.');
+    } catch (err) {
+      setBatchError(err.response?.data?.error || err.message || 'Failed to connect. Make sure the backend is online.');
+    } finally { setBatchLoading(false); }
+  };
+
+  const resetBatch = () => { setBatchText(''); setBatchResults(null); setBatchError(''); };
 
   const pillarColor = (score, max) => {
     const p = (score / max) * 100;
@@ -220,129 +242,202 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Text area */}
-              <div style={{ marginBottom:24 }}>
-                <label style={{ display:'block', fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#64748b', fontFamily:'JetBrains Mono,monospace', marginBottom:10 }}>
-                  Offer Text / Communication Log
-                </label>
-                <textarea
-                  id="text-content"
-                  value={text}
-                  onChange={e => setText(e.target.value)}
-                  placeholder="Paste the offer details, email transcripts, job postings, or social media recruitment texts here..."
-                  rows={8}
-                  style={{
-                    width:'100%', background:'rgba(5,14,29,0.6)',
-                    border:'1px solid rgba(255,255,255,0.08)', borderRadius:12,
-                    color:'#f1f5f9', fontSize:13, lineHeight:1.7, fontWeight:500,
-                    padding:'14px 16px', resize:'none', outline:'none',
-                    fontFamily:'Plus Jakarta Sans,sans-serif',
-                    transition:'border-color 0.2s, box-shadow 0.2s',
-                    boxSizing:'border-box',
-                  }}
-                  onFocus={e => { e.target.style.borderColor='rgba(59,130,246,0.45)'; e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,0.08)'; }}
-                  onBlur={e  => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
-                />
+              {/* Mode toggle */}
+              <div style={{ display:'flex', gap:8, marginBottom:24, padding:4, background:'rgba(5,14,29,0.6)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:12 }}>
+                {['single', 'batch'].map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    style={{
+                      flex:1, padding:'9px 16px', borderRadius:9, cursor:'pointer',
+                      fontSize:12, fontWeight:700, textTransform:'capitalize', transition:'all 0.2s',
+                      background: mode === m ? 'rgba(59,130,246,0.15)' : 'transparent',
+                      color: mode === m ? '#3b82f6' : '#64748b',
+                      border: mode === m ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
+                    }}
+                  >
+                    {m === 'single' ? 'Single Check' : 'Bulk / Forwarded List'}
+                  </button>
+                ))}
               </div>
 
-              {/* Upload zone */}
-              <div style={{ marginBottom:28 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                  <label style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#64748b', fontFamily:'JetBrains Mono,monospace' }}>
-                    Evidence Attachments
-                  </label>
-                  <span style={{ fontSize:9, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#64748b', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', padding:'2px 8px', borderRadius:6 }}>
-                    {files.length}/5
-                  </span>
-                </div>
-
-                <div
-                  onClick={() => inputRef.current?.click()}
-                  onDragEnter={onDragIn} onDragLeave={onDragOut} onDragOver={onDrag} onDrop={onDrop}
-                  style={{
-                    border:`1px dashed ${drag ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                    borderRadius:12, display:'flex', flexDirection:'column', alignItems:'center',
-                    justifyContent:'center', gap:10, minHeight:110, padding:'20px 16px',
-                    textAlign:'center', cursor:'pointer',
-                    background: drag ? 'rgba(59,130,246,0.05)' : 'rgba(255,255,255,0.01)',
-                    transition:'all 0.2s',
-                  }}
-                >
-                  <input ref={inputRef} type="file" accept="image/*" multiple onChange={onSelect} style={{ display:'none' }} />
-                  <div style={{ padding:10, borderRadius:12, background: drag ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', color: drag ? '#3b82f6' : '#64748b' }}>
-                    <Upload s={18} />
+              {mode === 'single' && (
+                <>
+                  {/* Text area */}
+                  <div style={{ marginBottom:24 }}>
+                    <label style={{ display:'block', fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#64748b', fontFamily:'JetBrains Mono,monospace', marginBottom:10 }}>
+                      Offer Text / Communication Log
+                    </label>
+                    <textarea
+                      id="text-content"
+                      value={text}
+                      onChange={e => setText(e.target.value)}
+                      placeholder="Paste the offer details, email transcripts, job postings, or social media recruitment texts here..."
+                      rows={8}
+                      style={{
+                        width:'100%', background:'rgba(5,14,29,0.6)',
+                        border:'1px solid rgba(255,255,255,0.08)', borderRadius:12,
+                        color:'#f1f5f9', fontSize:13, lineHeight:1.7, fontWeight:500,
+                        padding:'14px 16px', resize:'none', outline:'none',
+                        fontFamily:'Plus Jakarta Sans,sans-serif',
+                        transition:'border-color 0.2s, box-shadow 0.2s',
+                        boxSizing:'border-box',
+                      }}
+                      onFocus={e => { e.target.style.borderColor='rgba(59,130,246,0.45)'; e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,0.08)'; }}
+                      onBlur={e  => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
+                    />
                   </div>
-                  <div>
-                    <p style={{ fontSize:12, fontWeight:600, color:'#94a3b8', margin:0 }}>
-                      Drag screenshots here, or <span style={{ color:'#3b82f6', fontWeight:700 }}>browse files</span>
-                    </p>
-                    <p style={{ fontSize:11, color:'#475569', marginTop:4 }}>PNG, JPG, WebP — up to 5MB each</p>
+
+                  {/* Upload zone */}
+                  <div style={{ marginBottom:28 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                      <label style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#64748b', fontFamily:'JetBrains Mono,monospace' }}>
+                        Evidence Attachments
+                      </label>
+                      <span style={{ fontSize:9, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#64748b', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', padding:'2px 8px', borderRadius:6 }}>
+                        {files.length}/5
+                      </span>
+                    </div>
+
+                    <div
+                      onClick={() => inputRef.current?.click()}
+                      onDragEnter={onDragIn} onDragLeave={onDragOut} onDragOver={onDrag} onDrop={onDrop}
+                      style={{
+                        border:`1px dashed ${drag ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                        borderRadius:12, display:'flex', flexDirection:'column', alignItems:'center',
+                        justifyContent:'center', gap:10, minHeight:110, padding:'20px 16px',
+                        textAlign:'center', cursor:'pointer',
+                        background: drag ? 'rgba(59,130,246,0.05)' : 'rgba(255,255,255,0.01)',
+                        transition:'all 0.2s',
+                      }}
+                    >
+                      <input ref={inputRef} type="file" accept="image/*" multiple onChange={onSelect} style={{ display:'none' }} />
+                      <div style={{ padding:10, borderRadius:12, background: drag ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', color: drag ? '#3b82f6' : '#64748b' }}>
+                        <Upload s={18} />
+                      </div>
+                      <div>
+                        <p style={{ fontSize:12, fontWeight:600, color:'#94a3b8', margin:0 }}>
+                          Drag screenshots here, or <span style={{ color:'#3b82f6', fontWeight:700 }}>browse files</span>
+                        </p>
+                        <p style={{ fontSize:11, color:'#475569', marginTop:4 }}>PNG, JPG, WebP — up to 5MB each</p>
+                      </div>
+                    </div>
+
+                    {files.length > 0 && (
+                      <ul style={{ listStyle:'none', margin:'12px 0 0', padding:0, display:'flex', flexDirection:'column', gap:8 }}>
+                        {files.map((f, i) => (
+                          <li key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', borderRadius:10, border:'1px solid rgba(255,255,255,0.05)', background:'rgba(5,14,29,0.5)' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
+                              <div style={{ padding:6, borderRadius:8, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', color:'#64748b', flexShrink:0 }}>
+                                <Img s={13} />
+                              </div>
+                              <div style={{ minWidth:0 }}>
+                                <p style={{ fontSize:12, fontWeight:700, color:'#f1f5f9', margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{f.name}</p>
+                                <p style={{ fontSize:10, color:'#64748b', margin:'2px 0 0' }}>{fmt(f.size)}</p>
+                              </div>
+                            </div>
+                            <button onClick={e => { e.stopPropagation(); remove(i); }} style={{ background:'none', border:'none', cursor:'pointer', padding:6, borderRadius:8, color:'#64748b', transition:'all 0.2s', display:'flex' }}
+                              onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.1)'}
+                              onMouseLeave={e => e.currentTarget.style.background='none'}>
+                              <X s={12} />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                </div>
 
-                {files.length > 0 && (
-                  <ul style={{ listStyle:'none', margin:'12px 0 0', padding:0, display:'flex', flexDirection:'column', gap:8 }}>
-                    {files.map((f, i) => (
-                      <li key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', borderRadius:10, border:'1px solid rgba(255,255,255,0.05)', background:'rgba(5,14,29,0.5)' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
-                          <div style={{ padding:6, borderRadius:8, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', color:'#64748b', flexShrink:0 }}>
-                            <Img s={13} />
-                          </div>
-                          <div style={{ minWidth:0 }}>
-                            <p style={{ fontSize:12, fontWeight:700, color:'#f1f5f9', margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{f.name}</p>
-                            <p style={{ fontSize:10, color:'#64748b', margin:'2px 0 0' }}>{fmt(f.size)}</p>
-                          </div>
-                        </div>
-                        <button onClick={e => { e.stopPropagation(); remove(i); }} style={{ background:'none', border:'none', cursor:'pointer', padding:6, borderRadius:8, color:'#64748b', transition:'all 0.2s', display:'flex' }}
-                          onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.1)'}
-                          onMouseLeave={e => e.currentTarget.style.background='none'}>
-                          <X s={12} />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+                  {/* Buttons */}
+                  <div style={{ display:'flex', gap:12, paddingTop:20, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                    <button
+                      id="reset-btn"
+                      onClick={reset}
+                      disabled={loading || (!text && files.length === 0)}
+                      style={{
+                        flex:'0 0 auto', width:140, padding:'11px 16px',
+                        background:'transparent', border:'1px solid rgba(255,255,255,0.09)',
+                        borderRadius:12, color:'#94a3b8', fontSize:12, fontWeight:700,
+                        cursor:'pointer', transition:'all 0.2s', opacity: loading || (!text && files.length === 0) ? 0.35 : 1,
+                      }}
+                      onMouseEnter={e => { if(!e.currentTarget.disabled) { e.currentTarget.style.background='rgba(255,255,255,0.04)'; e.currentTarget.style.color='#f1f5f9'; }}}
+                      onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='#94a3b8'; }}
+                    >
+                      Clear Details
+                    </button>
+                    <button
+                      id="analyze-btn"
+                      onClick={analyze}
+                      disabled={loading}
+                      style={{
+                        flex:1, padding:'11px 20px', borderRadius:12, border:'none',
+                        background:'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                        color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer',
+                        display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                        boxShadow:'0 4px 16px rgba(59,130,246,0.25)',
+                        transition:'all 0.2s', opacity: loading ? 0.55 : 1,
+                      }}
+                      onMouseEnter={e => { if(!e.currentTarget.disabled) e.currentTarget.style.boxShadow='0 6px 24px rgba(59,130,246,0.4)'; }}
+                      onMouseLeave={e => e.currentTarget.style.boxShadow='0 4px 16px rgba(59,130,246,0.25)'}
+                    >
+                      {loading ? <><Spin /> Running Threat Audit...</> : <><Shield s={14} /> Execute Security Audit</>}
+                    </button>
+                  </div>
+                </>
+              )}
 
-              {/* Buttons */}
-              <div style={{ display:'flex', gap:12, paddingTop:20, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
-                <button
-                  id="reset-btn"
-                  onClick={reset}
-                  disabled={loading || (!text && files.length === 0)}
-                  style={{
-                    flex:'0 0 auto', width:140, padding:'11px 16px',
-                    background:'transparent', border:'1px solid rgba(255,255,255,0.09)',
-                    borderRadius:12, color:'#94a3b8', fontSize:12, fontWeight:700,
-                    cursor:'pointer', transition:'all 0.2s', opacity: loading || (!text && files.length === 0) ? 0.35 : 1,
-                  }}
-                  onMouseEnter={e => { if(!e.currentTarget.disabled) { e.currentTarget.style.background='rgba(255,255,255,0.04)'; e.currentTarget.style.color='#f1f5f9'; }}}
-                  onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='#94a3b8'; }}
-                >
-                  Clear Details
-                </button>
-                <button
-                  id="analyze-btn"
-                  onClick={analyze}
-                  disabled={loading}
-                  style={{
-                    flex:1, padding:'11px 20px', borderRadius:12, border:'none',
-                    background:'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer',
-                    display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                    boxShadow:'0 4px 16px rgba(59,130,246,0.25)',
-                    transition:'all 0.2s', opacity: loading ? 0.55 : 1,
-                  }}
-                  onMouseEnter={e => { if(!e.currentTarget.disabled) e.currentTarget.style.boxShadow='0 6px 24px rgba(59,130,246,0.4)'; }}
-                  onMouseLeave={e => e.currentTarget.style.boxShadow='0 4px 16px rgba(59,130,246,0.25)'}
-                >
-                  {loading ? <><Spin /> Running Threat Audit...</> : <><Shield s={14} /> Execute Security Audit</>}
-                </button>
-              </div>
+              {mode === 'batch' && (
+                <>
+                  <div style={{ marginBottom:24 }}>
+                    <label style={{ display:'block', fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#64748b', fontFamily:'JetBrains Mono,monospace', marginBottom:10 }}>
+                      Forwarded Job List (WhatsApp / Telegram / Email)
+                    </label>
+                    <textarea
+                      value={batchText}
+                      onChange={e => setBatchText(e.target.value)}
+                      placeholder="Paste the entire forwarded message containing multiple job/internship postings — no need to separate them, our AI will split and audit each one individually..."
+                      rows={10}
+                      style={{
+                        width:'100%', background:'rgba(5,14,29,0.6)',
+                        border:'1px solid rgba(255,255,255,0.08)', borderRadius:12,
+                        color:'#f1f5f9', fontSize:13, lineHeight:1.7, fontWeight:500,
+                        padding:'14px 16px', resize:'none', outline:'none',
+                        fontFamily:'Plus Jakarta Sans,sans-serif', boxSizing:'border-box',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display:'flex', gap:12, paddingTop:20, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                    <button
+                      onClick={resetBatch}
+                      disabled={batchLoading || !batchText}
+                      style={{
+                        flex:'0 0 auto', width:140, padding:'11px 16px',
+                        background:'transparent', border:'1px solid rgba(255,255,255,0.09)',
+                        borderRadius:12, color:'#94a3b8', fontSize:12, fontWeight:700,
+                        cursor:'pointer', opacity: batchLoading || !batchText ? 0.35 : 1,
+                      }}
+                    >
+                      Clear Details
+                    </button>
+                    <button
+                      onClick={analyzeBatch}
+                      disabled={batchLoading}
+                      style={{
+                        flex:1, padding:'11px 20px', borderRadius:12, border:'none',
+                        background:'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                        color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer',
+                        display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                        boxShadow:'0 4px 16px rgba(59,130,246,0.25)', opacity: batchLoading ? 0.55 : 1,
+                      }}
+                    >
+                      {batchLoading ? <><Spin /> Splitting & Auditing All Postings...</> : <><Shield s={14} /> Execute Bulk Audit</>}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {/* ── Error ──────────────────────────────────────── */}
+          {/* ── Error (single mode) ──────────────────────────── */}
           {error && (
             <div className="animate-slideUp" style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'16px 20px', borderRadius:16, background:'rgba(239,68,68,0.07)', border:'1px solid rgba(239,68,68,0.2)' }}>
               <span style={{ color:'#ef4444', flexShrink:0, marginTop:1 }}><Info s={16} /></span>
@@ -353,7 +448,18 @@ export default function App() {
             </div>
           )}
 
-          {/* ── Loading ─────────────────────────────────────── */}
+          {/* ── Error (batch mode) ───────────────────────────── */}
+          {batchError && (
+            <div className="animate-slideUp" style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'16px 20px', borderRadius:16, background:'rgba(239,68,68,0.07)', border:'1px solid rgba(239,68,68,0.2)' }}>
+              <span style={{ color:'#ef4444', flexShrink:0, marginTop:1 }}><Info s={16} /></span>
+              <div>
+                <p style={{ fontSize:10, fontWeight:700, color:'#ef4444', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 4px' }}>Bulk Audit Failed</p>
+                <p style={{ fontSize:12, color:'#94a3b8', margin:0, lineHeight:1.6 }}>{batchError}</p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Loading (single mode) ────────────────────────── */}
           {loading && (
             <div className="animate-slideUp" style={{ ...card, padding:'56px 36px', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:20, position:'relative', overflow:'hidden' }}>
               <div style={{ position:'absolute', top:0, inset:'0 0 auto' }}>
@@ -375,8 +481,23 @@ export default function App() {
             </div>
           )}
 
+          {/* ── Loading (batch mode) ─────────────────────────── */}
+          {batchLoading && (
+            <div className="animate-slideUp" style={{ ...card, padding:'56px 36px', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:20 }}>
+              <div style={{ width:64, height:64, borderRadius:'50%', border:'1px solid rgba(59,130,246,0.2)', background:'rgba(59,130,246,0.05)', display:'flex', alignItems:'center', justifyContent:'center', color:'#3b82f6' }}>
+                <Spin />
+              </div>
+              <div>
+                <h3 style={{ fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:15, color:'#f1f5f9', textTransform:'uppercase', letterSpacing:'0.06em', margin:'0 0 8px' }}>Splitting & Auditing Postings</h3>
+                <p style={{ fontSize:12, color:'#94a3b8', lineHeight:1.7, maxWidth:360, margin:'0 auto' }}>
+                  This may take a minute — each posting is individually scored, domain-verified, and cross-checked against history.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* ── Idle info ───────────────────────────────────── */}
-          {!loading && !result && (
+          {!loading && !batchLoading && !result && !batchResults && (
             <div className="animate-fadeIn" style={{ ...card, padding:'32px 36px' }}>
               <h3 style={{ fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:16, color:'#f1f5f9', margin:'0 0 8px' }}>Threat Evaluation Center</h3>
               <p style={{ fontSize:13, color:'#94a3b8', lineHeight:1.7, margin:'0 0 28px' }}>
@@ -416,7 +537,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ── Results ─────────────────────────────────────── */}
+          {/* ── Results (single mode) ────────────────────────── */}
           {!loading && result && (() => {
             const vc = verdictMap[result.verdict] || verdictMap['SUSPICIOUS'];
             return (
@@ -481,8 +602,8 @@ export default function App() {
                   </div>
                 )}
 
-                                {/* Domain Verification */}
-                                {result.domain_verification && (
+                {/* Domain Verification */}
+                {result.domain_verification && (
                   <div style={{ ...card, padding:'28px 36px' }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingBottom:18, borderBottom:'1px solid rgba(255,255,255,0.06)', marginBottom:22 }}>
                       <p style={{ fontSize:10, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.1em', margin:0 }}>Domain Verification</p>
@@ -517,8 +638,9 @@ export default function App() {
                     })()}
                   </div>
                 )}
-                                {/* Pattern Detection */}
-                                {result.pattern_detection && result.pattern_detection.priorSubmissionCount > 0 && (
+
+                {/* Pattern Detection */}
+                {result.pattern_detection && result.pattern_detection.priorSubmissionCount > 0 && (
                   <div style={{ ...card, padding:'28px 36px' }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingBottom:18, borderBottom:'1px solid rgba(255,255,255,0.06)', marginBottom:22 }}>
                       <p style={{ fontSize:10, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.1em', margin:0 }}>Pattern Detection</p>
@@ -619,6 +741,46 @@ export default function App() {
               </div>
             );
           })()}
+
+          {/* ── Results (batch mode) ──────────────────────────── */}
+          {!batchLoading && batchResults && (
+            <div className="animate-slideUp" style={{ display:'flex', flexDirection:'column', gap:20 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, fontFamily:'Outfit,sans-serif', fontWeight:700, fontSize:13, color:'#f1f5f9' }}>
+                  <span style={{ width:8, height:8, borderRadius:'50%', background:'#3b82f6', display:'inline-block' }} />
+                  {batchResults.postings_analyzed} Posting{batchResults.postings_analyzed !== 1 ? 's' : ''} Audited
+                </div>
+                <button onClick={resetBatch} style={{ fontSize:12, color:'#3b82f6', fontWeight:700, background:'none', border:'none', cursor:'pointer', textDecoration:'underline' }}>
+                  ← Audit New List
+                </button>
+              </div>
+
+              {batchResults.results.map((item, i) => (
+                <div key={i} style={{ ...card, padding:'24px 28px' }}>
+                  <p style={{ fontSize:10, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 14px' }}>
+                    Posting {i + 1}
+                  </p>
+                  {item.success ? (
+                    <div style={{ display:'flex', alignItems:'center', gap:20, flexWrap:'wrap' }}>
+                      <ScoreGauge score={item.data.score} />
+                      <div style={{ flex:1, minWidth:200 }}>
+                        <p style={{ fontSize:13, color:'#f1f5f9', fontWeight:600, margin:'0 0 8px', lineHeight:1.6 }}>
+                          {item.original_text.slice(0, 140)}{item.original_text.length > 140 ? '...' : ''}
+                        </p>
+                        {item.data.red_flags?.length > 0 && (
+                          <p style={{ fontSize:11, color:'#ef4444', margin:0, lineHeight:1.6 }}>
+                            ⚠ {item.data.red_flags[0]}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize:12, color:'#ef4444', margin:0 }}>Failed to analyze this posting: {item.error}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
         </div>{/* /content column */}
       </main>
