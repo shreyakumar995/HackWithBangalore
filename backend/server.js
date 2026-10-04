@@ -6,6 +6,7 @@ const Groq = require('groq-sdk');
 const path = require('path');
 const fs = require('fs');
 const whois = require('whois-json');
+const { saveSubmission, getPriorSubmissions } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -249,6 +250,35 @@ app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
         result.critical_flag_detected = true;
       }
     }
+        // --- PATTERN DETECTION ACROSS SUBMISSIONS ---
+    // Check if this company domain has been analyzed before, BEFORE saving
+    // this submission (so we don't match against ourselves).
+    if (result.company_domain) {
+      const priorSubmissions = getPriorSubmissions(result.company_domain);
+      if (priorSubmissions.length > 0) {
+        const avgScore = Math.round(
+          priorSubmissions.reduce((sum, s) => sum + s.score, 0) / priorSubmissions.length
+        );
+        const anyCriticalFlag = priorSubmissions.some((s) => s.critical_flag_detected === 1);
+
+        result.pattern_detection = {
+          priorSubmissionCount: priorSubmissions.length,
+          averagePriorScore: avgScore,
+          anyPriorCriticalFlag: anyCriticalFlag,
+        };
+
+        result.red_flags = result.red_flags || [];
+        result.red_flags.push(
+          `This company domain was previously analyzed ${priorSubmissions.length} time(s), with an average score of ${avgScore}/100${anyCriticalFlag ? ' and at least one prior critical red flag detected' : ''} — recurring submissions of the same domain can indicate a widely-circulated scam.`
+        );
+
+        if (avgScore < 40) {
+          result.critical_flag_detected = true;
+        }
+      } else {
+        result.pattern_detection = { priorSubmissionCount: 0, averagePriorScore: null, anyPriorCriticalFlag: false };
+      }
+    }
 
     // Calculate the real score ourselves from the pillar breakdown,
     // rather than trusting the LLM's self-reported total score.
@@ -266,6 +296,12 @@ app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
     }
 
     result.score = Math.max(0, Math.min(100, Math.round(finalScore)));
+    saveSubmission({
+      companyDomain: result.company_domain,
+      score: result.score,
+      verdict: result.verdict,
+      criticalFlagDetected: result.critical_flag_detected,
+    });
 
     res.json({
       success: true,

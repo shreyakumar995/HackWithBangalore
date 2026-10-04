@@ -517,6 +517,39 @@ export default function App() {
                     })()}
                   </div>
                 )}
+                                {/* Pattern Detection */}
+                                {result.pattern_detection && result.pattern_detection.priorSubmissionCount > 0 && (
+                  <div style={{ ...card, padding:'28px 36px' }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingBottom:18, borderBottom:'1px solid rgba(255,255,255,0.06)', marginBottom:22 }}>
+                      <p style={{ fontSize:10, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.1em', margin:0 }}>Pattern Detection</p>
+                      <span style={{ fontSize:9, fontFamily:'JetBrains Mono,monospace', fontWeight:700, color:'#64748b', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', padding:'2px 8px', borderRadius:6 }}>Cross-Submission</span>
+                    </div>
+                    {(() => {
+                      const pd = result.pattern_detection;
+                      const flagged = pd.averagePriorScore < 40 || pd.anyPriorCriticalFlag;
+                      const pColor = flagged ? '#ef4444' : '#f59e0b';
+                      const pBg = flagged ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)';
+                      const pBorder = flagged ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)';
+                      return (
+                        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
+                            <span style={{ fontSize:13, fontWeight:700, color:'#f1f5f9' }}>
+                              Analyzed {pd.priorSubmissionCount} time{pd.priorSubmissionCount !== 1 ? 's' : ''} before
+                            </span>
+                            <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'4px 12px', borderRadius:999, fontSize:10, fontWeight:700, letterSpacing:'0.06em', background:pBg, border:`1px solid ${pBorder}`, color:pColor }}>
+                              Avg score: {pd.averagePriorScore}/100
+                            </span>
+                          </div>
+                          <p style={{ fontSize:12, color:'#94a3b8', margin:0, lineHeight:1.7 }}>
+                            {flagged
+                              ? 'This company domain has a history of low scores across prior submissions — recurring reports of the same domain are a strong signal of a widely-circulated scam.'
+                              : 'This domain has been checked before by other users, with generally reasonable scores. Still worth your own independent verification.'}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
 
                 {/* Flags */}
                 {(result.red_flags?.length > 0 || result.green_flags?.length > 0) && (
