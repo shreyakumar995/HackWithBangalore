@@ -97,6 +97,15 @@ VERDICT THRESHOLDS:
 
 Be STRICT and SKEPTICAL. Students' financial safety depends on your analysis. When in doubt, score lower.`;
 
+const SPLIT_PROMPT = `You are given a raw block of text that may contain ONE or MULTIPLE separate job/internship postings, often forwarded together via WhatsApp or similar messaging apps with no clean formatting.
+
+Your task: split this text into individual, self-contained postings. Each posting should include everything relevant to evaluating that specific opportunity (company name, role, pay, contact info, etc.) — do not cut relevant details out of a posting while splitting.
+
+If the text only contains ONE posting, return an array with just that one item, with the text otherwise unchanged.
+
+Return ONLY a valid JSON object with NO additional text, NO markdown, NO code blocks:
+{"postings": ["<full text of posting 1>", "<full text of posting 2>", ...]}`;
+
 // Helper: clean up uploaded files
 function cleanupFiles(files) {
   if (!files) return;
@@ -140,78 +149,39 @@ async function checkDomainAge(domain) {
 }
 
 // Main evaluation endpoint
-app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
-  const uploadedFiles = req.files || [];
+async function analyzeOpportunity(textContent) {
+  const userMessage =
+    'Analyze the following internship opportunity for legitimacy:\n\n' +
+    `## Text Content Provided:\n${textContent}\n\n` +
+    'Provide your analysis as a JSON object following the exact format specified in your instructions.';
 
-  try {
-    const { textContent } = req.body;
+  const chatCompletion = await groq.chat.completions.create({
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userMessage },
+    ],
+    model: 'openai/gpt-oss-120b',
+    temperature: 0.3,
+    max_tokens: 2048,
+    top_p: 0.9,
+  });
 
-    if (!textContent && uploadedFiles.length === 0) {
-      return res.status(400).json({
-        error: 'Please provide at least some text content or upload screenshots for analysis.',
-      });
-    }
+  const responseText = chatCompletion.choices[0]?.message?.content;
+  if (!responseText) {
+    throw new Error('Empty response from Groq API');
+  }
 
-    if (!process.env.GROQ_API_KEY) {
-      return res.status(500).json({
-        error: 'GROQ_API_KEY is not configured. Please add it to the .env file.',
-      });
-    }
+  let result;
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    result = JSON.parse(jsonMatch[0]);
+  } else {
+    throw new Error('No JSON found in response');
+  }
 
-    // Build the user message
-    let userMessage = 'Analyze the following internship opportunity for legitimacy:\n\n';
-
-    if (textContent) {
-      userMessage += `## Text Content Provided:\n${textContent}\n\n`;
-    }
-
-    if (uploadedFiles.length > 0) {
-      userMessage += `## Screenshots Provided:\n${uploadedFiles.length} screenshot(s) were uploaded showing the internship advertisement/email.\n`;
-      userMessage += 'Note: The screenshots have been provided for context. Analyze any visible text, branding, contact information, and claims made in them.\n\n';
-
-      for (let i = 0; i < uploadedFiles.length; i++) {
-        userMessage += `[Screenshot ${i + 1}: ${uploadedFiles[i].originalname}]\n`;
-      }
-    }
-
-    userMessage += '\nProvide your analysis as a JSON object following the exact format specified in your instructions.';
-
-    // Call Groq API
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userMessage },
-      ],
-      model: 'openai/gpt-oss-120b',
-      temperature: 0.3,
-      max_tokens: 2048,
-      top_p: 0.9,
-    });
-
-    const responseText = chatCompletion.choices[0]?.message?.content;
-
-    if (!responseText) {
-      throw new Error('Empty response from Groq API');
-    }
-
-    // Parse the JSON response
-    let result;
-    try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch (parseError) {
-      console.error('Parse error. Raw response:', responseText);
-      throw new Error('Failed to parse AI response. Please try again.');
-    }
-
-    // Validate the result structure
-    if (!result.verdict || !result.pillar_scores) {
-      throw new Error('Invalid response structure from AI');
-    }
+  if (!result.verdict || !result.pillar_scores) {
+    throw new Error('Invalid response structure from AI');
+  }
 
     // --- REAL-WORLD VERIFICATION STEP ---
     // If the AI extracted a genuine company domain, actually check it via WHOIS.
@@ -302,18 +272,46 @@ app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
       verdict: result.verdict,
       criticalFlagDetected: result.critical_flag_detected,
     });
+     return result;
+}
 
-    res.json({
-      success: true,
-      data: result,
-    });
+app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
+  const uploadedFiles = req.files || [];
+
+  try {
+    const { textContent } = req.body;
+
+    if (!textContent && uploadedFiles.length === 0) {
+      return res.status(400).json({
+        error: 'Please provide at least some text content or upload screenshots for analysis.',
+      });
+    }
+
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({
+        error: 'GROQ_API_KEY is not configured. Please add it to the .env file.',
+      });
+    }
+
+    let fullText = textContent || '';
+
+    if (uploadedFiles.length > 0) {
+      fullText += `\n\n## Screenshots Provided:\n${uploadedFiles.length} screenshot(s) were uploaded showing the internship advertisement/email.\n`;
+      fullText += 'Note: The screenshots have been provided for context. Analyze any visible text, branding, contact information, and claims made in them.\n\n';
+      for (let i = 0; i < uploadedFiles.length; i++) {
+        fullText += `[Screenshot ${i + 1}: ${uploadedFiles[i].originalname}]\n`;
+      }
+    }
+
+    const result = await analyzeOpportunity(fullText);
+
+    res.json({ success: true, data: result });
   } catch (error) {
     console.error('Evaluation error:', error);
 
     if (error.message?.includes('API key')) {
       return res.status(401).json({ error: 'Invalid or missing Groq API key.' });
     }
-
     if (error.status === 429) {
       return res.status(429).json({ error: 'Rate limit exceeded. Please wait a moment and try again.' });
     }
@@ -323,6 +321,76 @@ app.post('/api/evaluate', upload.array('screenshots', 5), async (req, res) => {
     });
   } finally {
     cleanupFiles(uploadedFiles);
+  }
+});
+
+// Batch evaluation endpoint — takes a raw block of forwarded/bulk text,
+// splits it into individual postings via Groq, then runs each one through
+// the same analyzeOpportunity() pipeline as a single check.
+app.post('/api/evaluate-batch', async (req, res) => {
+  try {
+    const { textContent } = req.body;
+
+    if (!textContent || !textContent.trim()) {
+      return res.status(400).json({ error: 'Please provide the bulk text to analyze.' });
+    }
+
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({ error: 'GROQ_API_KEY is not configured.' });
+    }
+
+    // Step 1: split the raw block into individual postings
+    const splitCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: SPLIT_PROMPT },
+        { role: 'user', content: textContent },
+      ],
+      model: 'openai/gpt-oss-120b',
+      temperature: 0.2,
+      max_tokens: 4096,
+    });
+
+    const splitResponseText = splitCompletion.choices[0]?.message?.content;
+    if (!splitResponseText) {
+      throw new Error('Empty response from Groq API during splitting');
+    }
+
+    const splitJsonMatch = splitResponseText.match(/\{[\s\S]*\}/);
+    if (!splitJsonMatch) {
+      throw new Error('Could not parse posting split from AI response');
+    }
+
+    const { postings } = JSON.parse(splitJsonMatch[0]);
+    if (!Array.isArray(postings) || postings.length === 0) {
+      throw new Error('No individual postings could be identified in the provided text');
+    }
+
+    // Reasonable cap so one request can't trigger dozens of Groq calls at once
+    const cappedPostings = postings.slice(0, 10);
+
+    // Step 2: analyze each posting individually, reusing the exact same
+    // pipeline (scoring, WHOIS verification, pattern detection) as a
+    // single check. Run sequentially rather than in parallel to stay
+    // well within Groq's rate limits on a free-tier key.
+    const results = [];
+    for (const postingText of cappedPostings) {
+      try {
+        const analysis = await analyzeOpportunity(postingText);
+        results.push({ success: true, original_text: postingText, data: analysis });
+      } catch (err) {
+        results.push({ success: false, original_text: postingText, error: err.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      total_postings_found: postings.length,
+      postings_analyzed: cappedPostings.length,
+      results,
+    });
+  } catch (error) {
+    console.error('Batch evaluation error:', error);
+    res.status(500).json({ error: error.message || 'An unexpected error occurred during batch analysis.' });
   }
 });
 
