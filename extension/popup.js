@@ -9,6 +9,7 @@ function render(data) {
   document.getElementById("loading").style.display = "none";
   document.getElementById("error").style.display = "none";
   document.getElementById("result").style.display = "block";
+  document.getElementById("clearBtn").style.display = "block";
 
   const colors = getVerdictColors(data.score);
 
@@ -73,3 +74,7 @@ chrome.storage.local.get(["status", "result", "error"], (data) => {
 
 // Clear the badge once the user has actually viewed the result
 chrome.action.setBadgeText({ text: "" });
+document.getElementById("clearBtn").addEventListener("click", () => {
+  chrome.storage.local.clear();
+  location.reload();
+});
