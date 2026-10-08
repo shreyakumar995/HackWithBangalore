@@ -17,7 +17,7 @@ export const verdictMap = {
     desc: 'This internship aligns with standard corporate safety protocols and shows high transparency. No significant threats detected.',
     bg: 'rgba(16,185,129,0.1)',
     border: 'rgba(16,185,129,0.25)',
-    color: '#22C98A',
+    color: '#5E7655',
   },
   SUSPICIOUS: {
     tone: 'medium',
@@ -25,7 +25,7 @@ export const verdictMap = {
     desc: 'Caution advised. One or more parameters deviate from established corporate recruitment standards.',
     bg: 'rgba(244,185,66,0.1)',
     border: 'rgba(244,185,66,0.25)',
-    color: '#F4B942',
+    color: '#C58A2B',
   },
   'LIKELY SCAM': {
     tone: 'high',
@@ -33,7 +33,7 @@ export const verdictMap = {
     desc: 'Critical warning. Multiple indicators of recruitment fraud detected. Engage with extreme skepticism.',
     bg: 'rgba(255,77,94,0.1)',
     border: 'rgba(255,77,94,0.25)',
-    color: '#FF4D5E',
+    color: '#C8463F',
   },
   'DEFINITE SCAM': {
     tone: 'critical',
@@ -41,7 +41,7 @@ export const verdictMap = {
     desc: 'Immediate action required. Confirmed deceptive recruitment activity detected. Terminate contact immediately.',
     bg: 'rgba(255,77,94,0.1)',
     border: 'rgba(255,77,94,0.25)',
-    color: '#FF4D5E',
+    color: '#C8463F',
   },
 };
 
@@ -105,16 +105,16 @@ export const Spin = () => (
 );
 
 function riskLevel(score) {
-  if (score <= 20) return { text: 'CRITICAL', tone: 'critical', color: '#FF4D5E', bg: 'rgba(255,77,94,0.1)', border: 'rgba(255,77,94,0.25)' };
-  if (score <= 40) return { text: 'HIGH RISK', tone: 'high', color: '#FF4D5E', bg: 'rgba(255,77,94,0.1)', border: 'rgba(255,77,94,0.25)' };
-  if (score <= 70) return { text: 'MEDIUM', tone: 'medium', color: '#F4B942', bg: 'rgba(244,185,66,0.1)', border: 'rgba(244,185,66,0.25)' };
-  return { text: 'LOW RISK', tone: 'low', color: '#22C98A', bg: 'rgba(34,201,138,0.1)', border: 'rgba(34,201,138,0.25)' };
+  if (score <= 20) return { text: 'CRITICAL', tone: 'critical', color: '#C8463F', bg: 'rgba(200,70,63,0.1)', border: 'rgba(200,70,63,0.25)' };
+  if (score <= 40) return { text: 'HIGH RISK', tone: 'high', color: '#C8463F', bg: 'rgba(200,70,63,0.1)', border: 'rgba(200,70,63,0.25)' };
+  if (score <= 70) return { text: 'MEDIUM', tone: 'medium', color: '#C58A2B', bg: 'rgba(197,138,43,0.12)', border: 'rgba(197,138,43,0.28)' };
+  return { text: 'LOW RISK', tone: 'low', color: '#5E7655', bg: 'rgba(94,118,85,0.12)', border: 'rgba(94,118,85,0.28)' };
 }
 
 function toneColor(tone) {
-  if (tone === 'low') return '#22C98A';
-  if (tone === 'medium') return '#F4B942';
-  return '#FF4D5E';
+  if (tone === 'low') return '#5E7655';
+  if (tone === 'medium') return '#C58A2B';
+  return '#C8463F';
 }
 
 // ─── Score Gauge ─────────────────────────────────────────────────────────────

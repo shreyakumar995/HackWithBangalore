@@ -19,9 +19,9 @@ function pillarTone(score, max) {
 }
 
 function toneColor(tone) {
-  if (tone === 'low') return '#22C98A';
-  if (tone === 'medium') return '#F4B942';
-  return '#FF4D5E';
+  if (tone === 'low') return '#5E7655';
+  if (tone === 'medium') return '#C58A2B';
+  return '#C8463F';
 }
 
 function DomainBlock({ dv }) {

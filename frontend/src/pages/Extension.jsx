@@ -20,9 +20,9 @@ export default function Extension() {
               borderRadius: 12,
               display: 'grid',
               placeItems: 'center',
-              color: '#4F8FFF',
-              background: 'rgba(59,130,246,0.12)',
-              border: '1px solid rgba(59,130,246,0.28)',
+              color: '#D85C32',
+              background: 'rgba(216,92,50,0.12)',
+              border: '1px solid rgba(216,92,50,0.28)',
             }}
           >
             <Shield s={18} />
@@ -46,7 +46,7 @@ export default function Extension() {
           style={{ marginBottom: 22, position: 'relative', minHeight: 200, padding: 18, borderRadius: 16, background: '#0A111C', border: '1px solid var(--border)' }}
         >
           <div style={{ maxWidth: '70%', padding: 12, borderRadius: 10, border: '1px dashed rgba(132,145,163,0.35)', color: 'var(--muted)', fontSize: 13, lineHeight: 1.55 }}>
-            Selected: <mark style={{ background: 'rgba(59,130,246,0.22)', color: '#dbeafe' }}>Pay ₹999 to confirm your internship seat.</mark>
+            Selected: <mark style={{ background: 'rgba(216,92,50,0.18)', color: '#171717' }}>Pay ₹999 to confirm your internship seat.</mark>
           </div>
           <div
             style={{
@@ -64,7 +64,7 @@ export default function Extension() {
             {['Copy', 'Search Google for…'].map((l) => (
               <div key={l} style={{ padding: '9px 10px', fontSize: 12, color: '#e5e7eb' }}>{l}</div>
             ))}
-            <div style={{ padding: '9px 10px', fontSize: 12, borderRadius: 7, background: 'rgba(59,130,246,0.16)', color: '#93c5fd', fontWeight: 600 }}>
+            <div style={{ padding: '9px 10px', fontSize: 12, borderRadius: 7, background: 'rgba(216,92,50,0.14)', color: '#D85C32', fontWeight: 600 }}>
               Analyze with ShieldIntern
             </div>
             <div style={{ padding: '9px 10px', fontSize: 12, color: '#e5e7eb' }}>Inspect</div>
@@ -78,7 +78,7 @@ export default function Extension() {
               {step.startsWith('Open Chrome') ? (
                 <>
                   Open Chrome and go to{' '}
-                  <code style={{ color: '#4F8FFF', fontFamily: 'var(--mono)' }}>chrome://extensions</code>
+                  <code style={{ color: '#D85C32', fontFamily: 'var(--mono)' }}>chrome://extensions</code>
                 </>
               ) : (
                 step

@@ -127,27 +127,6 @@ export default function SecurityScanner({ defaultMode = 'single', embedded = fal
           <p>ShieldIntern scores financial pressure, domain age, recruitment process, and marketing claims against the same four pillars every time.</p>
         </div>
 
-        <div className="mode-tabs" role="tablist" aria-label="Audit mode">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'single'}
-            className={`mode-tab${mode === 'single' ? ' is-active' : ''}`}
-            onClick={() => setMode('single')}
-          >
-            Single Check
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'bulk'}
-            className={`mode-tab${mode === 'bulk' ? ' is-active' : ''}`}
-            onClick={() => setMode('bulk')}
-          >
-            Bulk / Forwarded List
-          </button>
-        </div>
-
         {mode === 'single' ? (
           <>
             <label className="field-label" htmlFor="text-content">Offer / communication</label>
@@ -235,7 +214,7 @@ export default function SecurityScanner({ defaultMode = 'single', embedded = fal
                 onClick={analyze}
                 disabled={loading}
               >
-                {loading ? <><Spin /> Analyzing...</> : <><Shield s={15} /> Run Security Audit</>}
+                {loading ? <><Spin /> Analyzing...</> : <><Shield s={15} /> Check this offer</>}
               </button>
             </div>
           </>
