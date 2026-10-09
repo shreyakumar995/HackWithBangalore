@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { ScoreGauge, Shield, Spin, verdictMap } from '../shared';
+import { recordAudit } from '../historyStore';
 
 function summaryLine(summary) {
   const { more_flags, left_red_flags, right_red_flags } = summary;
@@ -57,7 +58,11 @@ export default function Compare() {
     setResult(null);
     try {
       const res = await axios.post('/api/compare', { offerA, offerB }, { timeout: 180000 });
-      if (res.data.success) setResult(res.data);
+      if (res.data.success) {
+        recordAudit(res.data.left);
+        recordAudit(res.data.right);
+        setResult(res.data);
+      }
       else setError(res.data.error || 'Comparison failed. Please try again.');
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Failed to connect. Make sure the backend is online.');

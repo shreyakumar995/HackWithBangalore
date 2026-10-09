@@ -2,10 +2,10 @@ import { Link } from 'react-router-dom';
 import { Shield } from '../shared';
 
 const STEPS = [
-  'Open Chrome and go to chrome://extensions',
-  'Turn on Developer Mode (top-right toggle)',
-  'Click “Load unpacked”',
-  'Select the project’s extension folder',
+  'Send them a zip of the extension folder only, with manifest.json at the top',
+  'They unzip it, then open Chrome and go to chrome://extensions',
+  'They turn on Developer Mode (top-right toggle)',
+  'They click “Load unpacked” and select the unzipped folder',
 ];
 
 export default function Extension() {
@@ -37,8 +37,8 @@ export default function Extension() {
 
         <p style={{ margin: '0 0 20px', color: 'var(--muted)', lineHeight: 1.7, fontSize: 15 }}>
           Highlight recruiter text on any page, then right-click{' '}
-          <strong style={{ color: '#fff', fontWeight: 600 }}>Analyze with ShieldIntern</strong> to send that
-          selection into the same legitimacy audit used on this site.
+          <strong style={{ color: '#171717', fontWeight: 600 }}>Analyze with ShieldIntern</strong> to send that
+          selection into the same legitimacy audit used on this site. On any page, fee requests, urgency lines, and guaranteed-placement claims are underlined locally — that highlight does not call the server.
         </p>
 
         <div
@@ -71,7 +71,7 @@ export default function Extension() {
           </div>
         </div>
 
-        <p className="kicker" style={{ marginBottom: 12 }}>Install (unpacked)</p>
+        <p className="kicker" style={{ marginBottom: 12 }}>Share it before it is in the Chrome Web Store</p>
         <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {STEPS.map((step) => (
             <li key={step} style={{ color: 'var(--muted-light)', fontSize: 14, lineHeight: 1.55 }}>
@@ -99,8 +99,10 @@ export default function Extension() {
             lineHeight: 1.6,
           }}
         >
-          After loading, pin the extension from the Chrome toolbar. Select text on a career site or chat page,
-          open the context menu, and run an analysis without leaving the tab.
+          A normal “Add to Chrome” button only exists after the extension is published in the Chrome Web Store.
+          Until then, other people install the unzipped folder with Developer mode. Underlines work on their
+          browser without your server. A full score still calls the API, which is localhost until that address
+          points at the deployed backend.
         </div>
 
         <div style={{ marginTop: 20 }}>

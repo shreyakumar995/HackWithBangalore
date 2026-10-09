@@ -239,6 +239,30 @@ function PatternDiagram({ reduceMotion }) {
   );
 }
 
+function Eli5Preview() {
+  const [simple, setSimple] = useState(false);
+  return (
+    <div className="feature-demo">
+      <div className="eli5-row">
+        <span className="eyebrow" style={{ margin: 0 }}>{simple ? 'Plain explanation' : 'Full advice'}</span>
+        <button
+          type="button"
+          className="eli5-toggle"
+          aria-pressed={simple}
+          onClick={() => setSimple((on) => !on)}
+        >
+          {simple ? 'Show full advice' : 'Explain simply'}
+        </button>
+      </div>
+      <p className="eli5-copy">
+        {simple
+          ? 'They want ₹999 before any interview. Do not pay. A real internship does not charge you for the seat.'
+          : 'An upfront registration fee plus a 24-hour deadline is a strong fraud signal. Do not transfer money until the employer and the domain are checked on their own.'}
+      </p>
+    </div>
+  );
+}
+
 function HeroScene({ reduceMotion }) {
   const drift = (delay) => (
     reduceMotion
@@ -476,10 +500,11 @@ export default function Landing() {
         <div className="story-split reverse">
           <div className="story-copy">
             <p className="eyebrow">Browser extension</p>
-            <h2>Check an offer without leaving the page.</h2>
+            <h2>Suspicious lines get underlined where you read them.</h2>
             <p>
-              Highlight a LinkedIn DM or job-board blurb and right-click Analyze with ShieldIntern. One click.
-              No copy-paste.
+              On any page, fee requests, urgency lines, and guaranteed-placement claims are marked locally.
+              No server call for that. When you want a full score, select the text and right-click Analyze
+              with ShieldIntern.
             </p>
             <div className="story-ctas" style={{ marginTop: 20 }}>
               <Link className="btn btn-ghost" to="/extension">Install extension</Link>
@@ -488,7 +513,9 @@ export default function Landing() {
           <div className="story-visual">
             <div className="ext-scene">
               <div className="ext-fake">
-                Selected text: <mark>Transfer ₹1,499 to unlock your onboarding kit before Monday.</mark>
+                You&apos;ve been selected. <span className="page-hl fee">Pay ₹999 registration fee</span> within{' '}
+                <span className="page-hl urgency">24 hours</span>. We offer{' '}
+                <span className="page-hl guarantee">100% placement</span>.
               </div>
               <div className="ext-menu" role="menu" aria-label="Browser context menu mock">
                 <button type="button">Copy</button>
@@ -497,6 +524,90 @@ export default function Landing() {
                 <button type="button">Inspect</button>
               </div>
             </div>
+          </div>
+        </div>
+      </Reveal>
+
+      <Reveal className="story-section" variant="left" reduceMotion={reduceMotion}>
+        <div className="story-split">
+          <div className="story-copy">
+            <p className="eyebrow">Compare</p>
+            <h2>Two real offers. See which one carries more red flags.</h2>
+            <p>
+              When you are choosing between two internships, paste both. Each is scored with the same check.
+              The page tells you which one raised more red flags, and lists them side by side.
+            </p>
+            <div className="story-ctas" style={{ marginTop: 20 }}>
+              <Link className="btn btn-ghost" to="/compare">Compare two offers</Link>
+            </div>
+          </div>
+          <div className="story-visual">
+            <div className="feature-demo">
+              <p className="feature-banner">Offer A has more red flags (4 vs 1).</p>
+              <div className="feature-pair">
+                <article>
+                  <span>Offer A</span>
+                  <strong className="t-bad">4 red flags</strong>
+                  <p>Pay ₹999 to confirm the seat within 24 hours.</p>
+                </article>
+                <article>
+                  <span>Offer B</span>
+                  <strong className="t-ok">1 red flag</strong>
+                  <p>Campus drive listed on the company careers page.</p>
+                </article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Reveal>
+
+      <Reveal className="story-section" variant="right" reduceMotion={reduceMotion}>
+        <div className="story-split reverse">
+          <div className="story-copy">
+            <p className="eyebrow">Plain explanation</p>
+            <h2>The same advice, in words you can act on.</h2>
+            <p>
+              After a check, the written recommendation can switch to a plainer version. The score and the
+              flags stay the same. Only the wording changes.
+            </p>
+            <div className="story-ctas" style={{ marginTop: 20 }}>
+              <Link className="btn btn-ghost" to="/check">Try it on a check</Link>
+            </div>
+          </div>
+          <div className="story-visual">
+            <Eli5Preview />
+          </div>
+        </div>
+      </Reveal>
+
+      <Reveal className="story-section" variant="up" reduceMotion={reduceMotion}>
+        <div className="story-split">
+          <div className="story-copy">
+            <p className="eyebrow">Safety guide</p>
+            <h2>What to look for, and where to report it in India.</h2>
+            <p>
+              A short reference for the usual tricks, what a real hiring process looks like, and what to do
+              if money or documents have already been sent.
+            </p>
+            <div className="story-ctas" style={{ marginTop: 20 }}>
+              <Link className="btn btn-ghost" to="/safety-guide">Read the safety guide</Link>
+            </div>
+          </div>
+          <div className="story-visual">
+            <ul className="guide-preview">
+              <li>
+                <strong>Common patterns</strong>
+                <span>Fees before work, fake urgency, chat-only hiring.</span>
+              </li>
+              <li>
+                <strong>Real recruitment</strong>
+                <span>You can find the role yourself. The company pays you.</span>
+              </li>
+              <li>
+                <strong>Report it</strong>
+                <span>Call 1930 if money moved, then file at cybercrime.gov.in.</span>
+              </li>
+            </ul>
           </div>
         </div>
       </Reveal>

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
-import { Spin, verdictMap } from '../shared';
+import { useMemo, useState } from 'react';
+import { verdictMap } from '../shared';
+import { readHistory } from '../historyStore';
 
 function scoreTone(score) {
   if (score <= 40) return 'high';
@@ -22,33 +22,9 @@ function formatDate(value) {
 }
 
 export default function History() {
-  const [submissions, setSubmissions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [submissions] = useState(() => readHistory());
   const [verdictFilter, setVerdictFilter] = useState('ALL');
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await axios.get('/api/history', { timeout: 15000 });
-        if (!cancelled) {
-          if (res.data.success) setSubmissions(res.data.submissions || []);
-          else setError(res.data.error || 'Failed to load history.');
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.response?.data?.error || err.message || 'Failed to connect. Make sure the backend is online.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   const verdicts = useMemo(() => {
     const set = new Set(submissions.map((s) => s.verdict).filter(Boolean));
@@ -69,7 +45,7 @@ export default function History() {
       <div className="section-head">
         <p className="kicker">Submission history</p>
         <h2 className="section-title">Recent audits</h2>
-        <p className="section-copy">Last 50 evaluations stored by the backend — domains, scores, and verdicts.</p>
+        <p className="section-copy">Checks from this browser only. They stay on this device and are not shown to anyone else.</p>
       </div>
 
       <div
@@ -109,30 +85,17 @@ export default function History() {
         </select>
       </div>
 
-      {loading && (
-        <div className="loading-panel">
-          <h3><Spin /> Loading history...</h3>
-        </div>
-      )}
-
-      {error && (
-        <div className="callout" role="alert">
-          <h3>Could not load history</h3>
-          <p>{error}</p>
-        </div>
-      )}
-
-      {!loading && !error && filtered.length === 0 && (
+      {filtered.length === 0 && (
         <div className="glass panel" style={{ textAlign: 'center', padding: 40 }}>
           <p className="kicker">Empty</p>
           <h3 style={{ margin: '8px 0 0', fontWeight: 500 }}>No submissions yet</h3>
           <p className="section-copy" style={{ margin: '10px auto 0' }}>
-            Run a single or bulk audit to populate this list.
+            Run a check, a bulk audit, or a comparison in this browser to fill this list.
           </p>
         </div>
       )}
 
-      {!loading && filtered.length > 0 && (
+      {filtered.length > 0 && (
         <div className="glass" style={{ overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>

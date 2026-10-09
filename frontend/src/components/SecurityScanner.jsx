@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { Shield, Upload, X, Spin, ScoreGauge } from '../shared';
 import AuditResults from './AuditResults';
+import { recordAudit } from '../historyStore';
 
 export default function SecurityScanner({ defaultMode = 'single', embedded = false }) {
   const [mode, setMode] = useState(defaultMode === 'bulk' ? 'bulk' : 'single');
@@ -66,6 +67,7 @@ export default function SecurityScanner({ defaultMode = 'single', embedded = fal
         timeout: 60000,
       });
       if (res.data.success) {
+        recordAudit(res.data.data);
         setResult(res.data.data);
         requestAnimationFrame(() => {
           document.getElementById('live-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -96,7 +98,12 @@ export default function SecurityScanner({ defaultMode = 'single', embedded = fal
     setBatchResults(null);
     try {
       const res = await axios.post('/api/evaluate-batch', { textContent: batchText }, { timeout: 180000 });
-      if (res.data.success) setBatchResults(res.data);
+      if (res.data.success) {
+        (res.data.results || []).forEach((item) => {
+          if (item.success && item.data) recordAudit(item.data);
+        });
+        setBatchResults(res.data);
+      }
       else setBatchError(res.data.error || 'Batch audit failed. Please try again.');
     } catch (err) {
       setBatchError(err.response?.data?.error || err.message || 'Failed to connect. Make sure the backend is online.');

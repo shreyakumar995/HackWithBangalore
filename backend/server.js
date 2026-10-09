@@ -457,21 +457,9 @@ app.use((err, req, res, next) => {
   }
   next();
 });
-// Fetch recent submission history for the dashboard view
+// Personal history lives in the browser. This route no longer returns other people's checks.
 app.get('/api/history', (req, res) => {
-  try {
-    const db = require('better-sqlite3')(require('path').join(__dirname, 'submissions.db'));
-    const rows = db.prepare(`
-      SELECT id, company_domain, score, verdict, critical_flag_detected, created_at
-      FROM submissions
-      ORDER BY created_at DESC
-      LIMIT 50
-    `).all();
-    db.close();
-    res.json({ success: true, submissions: rows });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  res.json({ success: true, submissions: [] });
 });
 
 const server = app.listen(PORT, () => {

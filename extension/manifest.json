@@ -4,6 +4,14 @@
   "version": "0.1.0",
   "description": "Analyze selected job text for internship scam signals.",
   "permissions": ["contextMenus", "storage", "activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "css": ["highlight.css"],
+      "run_at": "document_idle"
+    }
+  ],
   "background": {
     "service_worker": "background.js"
   },

@@ -376,7 +376,80 @@
   font-size: 13px;
   line-height: 1.55;
 }
-.ext-fake mark { background: rgba(216, 92, 50, 0.16); color: #171717; }
+.ext-fake mark,
+.page-hl { color: #171717; border-radius: 2px; }
+.page-hl.fee {
+  text-decoration: underline wavy #c8463f;
+  background: rgba(200, 70, 63, 0.14);
+}
+.page-hl.urgency {
+  text-decoration: underline wavy #c58a2b;
+  background: rgba(197, 138, 43, 0.16);
+}
+.page-hl.guarantee {
+  text-decoration: underline wavy #b96b68;
+  background: rgba(185, 107, 104, 0.16);
+}
+
+.feature-demo {
+  padding: 18px;
+  border-radius: 20px;
+  background: #FBF8F3;
+  border: 1px solid rgba(23, 23, 23, 0.1);
+  box-shadow: 0 18px 45px rgba(35, 30, 20, 0.1);
+}
+.feature-banner {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(200, 70, 63, 0.1);
+  border: 1px solid rgba(200, 70, 63, 0.28);
+  font-weight: 700;
+  font-size: 14px;
+}
+.feature-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.feature-pair article {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(23, 23, 23, 0.1);
+  background: #fff;
+}
+.feature-pair span {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a867c;
+}
+.feature-pair strong { display: block; margin-top: 6px; font-size: 16px; }
+.feature-pair p { margin: 6px 0 0; color: #69665F; font-size: 13px; line-height: 1.45; }
+.eli5-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.eli5-copy { margin: 14px 0 0; color: #3d3a35; font-size: 15px; line-height: 1.65; }
+.guide-preview {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.guide-preview li {
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: #FBF8F3;
+  border: 1px solid rgba(23, 23, 23, 0.1);
+}
+.guide-preview strong { display: block; font-size: 15px; }
+.guide-preview span { display: block; margin-top: 4px; color: #69665F; font-size: 14px; line-height: 1.5; }
 .ext-menu {
   position: absolute;
   right: 18px;
@@ -464,7 +537,7 @@
   .story-split.reverse .story-visual { order: initial; }
   .story-hero h1, .story-copy h2 { max-width: none; }
   .hero-stage { min-height: 520px; }
-  .signals-panel, .bulk-cards, .process { grid-template-columns: 1fr; }
+  .signals-panel, .bulk-cards, .process, .feature-pair { grid-template-columns: 1fr; }
   .ext-menu { position: relative; right: auto; top: auto; margin-top: 12px; width: 100%; }
   .ext-fake { max-width: 100%; }
   .story-ctas { flex-direction: column; }

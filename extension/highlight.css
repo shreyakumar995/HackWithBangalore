@@ -1,0 +1,42 @@
+span.si-hl {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  cursor: help;
+  border-radius: 2px;
+}
+
+span.si-hl.si-fee {
+  text-decoration-color: #c8463f;
+  background: rgba(200, 70, 63, 0.14);
+}
+
+span.si-hl.si-urgency {
+  text-decoration-color: #c58a2b;
+  background: rgba(197, 138, 43, 0.16);
+}
+
+span.si-hl.si-guarantee {
+  text-decoration-color: #b96b68;
+  background: rgba(185, 107, 104, 0.16);
+}
+
+#si-tip {
+  position: fixed;
+  z-index: 2147483647;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #171717;
+  color: #f4f0e8;
+  font: 12px/1.45 "Segoe UI", system-ui, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(23, 23, 23, 0.28);
+}
+
+#si-tip[hidden] {
+  display: none;
+}

@@ -1848,8 +1848,8 @@ img { max-width: 100%; display: block; }
   margin-top: 16px;
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(255, 77, 94, 0.28);
-  background: rgba(255, 77, 94, 0.07);
+  border: 1px solid rgba(200, 70, 63, 0.28);
+  background: #f8ece8;
 }
 
 .advisory-rail {
@@ -1870,7 +1870,7 @@ img { max-width: 100%; display: block; }
 
 .advisory-body p {
   margin: 0;
-  color: #fecaca;
+  color: #3a2422;
   font-size: 14px;
   line-height: 1.65;
 }
