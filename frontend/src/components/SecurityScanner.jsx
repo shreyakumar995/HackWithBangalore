@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Shield, Upload, X, Spin, ScoreGauge } from '../shared';
 import AuditResults from './AuditResults';
 import { recordAudit } from '../historyStore';
+import { API_URL } from '../config';
 
 export default function SecurityScanner({ defaultMode = 'single', embedded = false }) {
   const [mode, setMode] = useState(defaultMode === 'bulk' ? 'bulk' : 'single');
@@ -62,7 +63,7 @@ export default function SecurityScanner({ defaultMode = 'single', embedded = fal
       const fd = new FormData();
       fd.append('textContent', text);
       files.forEach((f) => fd.append('screenshots', f));
-      const res = await axios.post('/api/evaluate', fd, {
+      const res = await axios.post(`${API_URL}/api/evaluate`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000,
       });
@@ -97,7 +98,7 @@ export default function SecurityScanner({ defaultMode = 'single', embedded = fal
     setBatchError('');
     setBatchResults(null);
     try {
-      const res = await axios.post('/api/evaluate-batch', { textContent: batchText }, { timeout: 180000 });
+      const res = await axios.post(`${API_URL}/api/evaluate-batch`, { textContent: batchText }, { timeout: 180000 });
       if (res.data.success) {
         (res.data.results || []).forEach((item) => {
           if (item.success && item.data) recordAudit(item.data);

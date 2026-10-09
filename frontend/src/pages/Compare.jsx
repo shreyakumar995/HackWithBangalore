@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { ScoreGauge, Shield, Spin, verdictMap } from '../shared';
 import { recordAudit } from '../historyStore';
+import { API_URL } from '../config';
 
 function summaryLine(summary) {
   const { more_flags, left_red_flags, right_red_flags } = summary;
@@ -57,7 +58,7 @@ export default function Compare() {
     setError('');
     setResult(null);
     try {
-      const res = await axios.post('/api/compare', { offerA, offerB }, { timeout: 180000 });
+      const res = await axios.post(`${API_URL}/api/compare`, { offerA, offerB }, { timeout: 180000 });
       if (res.data.success) {
         recordAudit(res.data.left);
         recordAudit(res.data.right);
