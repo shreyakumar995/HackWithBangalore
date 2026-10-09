@@ -87,7 +87,7 @@ Extract the company's email domain if a contact email is mentioned anywhere in t
 
 ## OUTPUT FORMAT
 You MUST return ONLY a valid JSON object with NO additional text, NO markdown formatting, NO code blocks. Just the raw JSON:
-{"score": <number 0-100>, "verdict": "<one of: LEGITIMATE, SUSPICIOUS, LIKELY SCAM, DEFINITE SCAM>", "critical_flag_detected": <true or false>, "company_domain": "<extracted domain or null>", "pillar_scores": {"financial_structure": {"score": <number>, "max": 35, "details": "<brief explanation>"}, "digital_footprint": {"score": <number>, "max": 25, "details": "<brief explanation>"}, "recruitment_process": {"score": <number>, "max": 20, "details": "<brief explanation>"}, "marketing_substance": {"score": <number>, "max": 20, "details": "<brief explanation>"}}, "green_flags": ["<array of positive indicators found>"], "red_flags": ["<array of negative indicators found>"], "recommendation": "<2-3 sentence actionable advice for the student>"}
+{"score": <number 0-100>, "verdict": "<one of: LEGITIMATE, SUSPICIOUS, LIKELY SCAM, DEFINITE SCAM>", "critical_flag_detected": <true or false>, "company_domain": "<extracted domain or null>", "pillar_scores": {"financial_structure": {"score": <number>, "max": 35, "details": "<brief explanation>"}, "digital_footprint": {"score": <number>, "max": 25, "details": "<brief explanation>"}, "recruitment_process": {"score": <number>, "max": 20, "details": "<brief explanation>"}, "marketing_substance": {"score": <number>, "max": 20, "details": "<brief explanation>"}}, "green_flags": ["<array of positive indicators found>"], "red_flags": ["<array of negative indicators found>"], "recommendation": "<2-3 sentence actionable advice for the student>", "recommendation_simple": "<the same advice as recommendation, rewritten in very plain words a first-year student would understand. No jargon. 2-3 short sentences.>"}
 
 VERDICT THRESHOLDS:
 - 71-100: LEGITIMATE
@@ -394,6 +394,48 @@ app.post('/api/evaluate-batch', async (req, res) => {
   }
 });
 
+// Compare two offers with the same analyzeOpportunity() pipeline used by a single check.
+app.post('/api/compare', async (req, res) => {
+  try {
+    const offerA = String(req.body.offerA || '').trim();
+    const offerB = String(req.body.offerB || '').trim();
+
+    if (!offerA || !offerB) {
+      return res.status(400).json({ error: 'Paste both offers before comparing.' });
+    }
+
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({ error: 'GROQ_API_KEY is not configured.' });
+    }
+
+    const left = await analyzeOpportunity(offerA);
+    const right = await analyzeOpportunity(offerB);
+    const leftFlags = left.red_flags?.length || 0;
+    const rightFlags = right.red_flags?.length || 0;
+    const more_flags = leftFlags === rightFlags ? 'tie' : leftFlags > rightFlags ? 'left' : 'right';
+
+    res.json({
+      success: true,
+      left,
+      right,
+      summary: {
+        more_flags,
+        left_red_flags: leftFlags,
+        right_red_flags: rightFlags,
+      },
+    });
+  } catch (error) {
+    console.error('Compare error:', error);
+    if (error.message?.includes('API key')) {
+      return res.status(401).json({ error: 'Invalid or missing Groq API key.' });
+    }
+    if (error.status === 429) {
+      return res.status(429).json({ error: 'Rate limit exceeded. Please wait a moment and try again.' });
+    }
+    res.status(500).json({ error: error.message || 'An unexpected error occurred during comparison.' });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -432,8 +474,14 @@ app.get('/api/history', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n🛡️  Internship Legitimacy Scorer API`);
   console.log(`   Server running on http://localhost:${PORT}`);
   console.log(`   Health check: http://localhost:${PORT}/api/health\n`);
 });
+
+// Compare and bulk checks call the model more than once. Don't cut the socket
+// while that work is still running.
+server.timeout = 0;
+server.requestTimeout = 0;
+server.headersTimeout = 0;

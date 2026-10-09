@@ -10,9 +10,11 @@ const CENTER_NAV = [
 ];
 
 const FEATURE_NAV = [
+  { to: '/compare', label: 'Compare' },
   { to: '/bulk', label: 'Bulk' },
   { to: '/history', label: 'History' },
   { to: '/extension', label: 'Extension' },
+  { to: '/safety-guide', label: 'Guide' },
 ];
 
 export default function Layout() {
@@ -129,9 +131,11 @@ export default function Layout() {
           </div>
           <nav aria-label="Footer">
             <Link to="/check">Scanner</Link>
+            <Link to="/compare">Compare</Link>
             <Link to="/bulk">Bulk</Link>
             <Link to="/history">History</Link>
             <Link to="/extension">Extension</Link>
+            <Link to="/safety-guide">Safety guide</Link>
           </nav>
         </div>
       </footer>

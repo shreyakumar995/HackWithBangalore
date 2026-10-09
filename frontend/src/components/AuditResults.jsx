@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   ScoreGauge,
   Shield,
@@ -69,8 +70,10 @@ function PatternBlock({ pd }) {
 }
 
 export default function AuditResults({ result, onReset }) {
+  const [eli5, setEli5] = useState(false);
   const vc = verdictMap[result.verdict] || verdictMap.SUSPICIOUS;
   const showAdvisory = result.critical_flag_detected || result.verdict === 'DEFINITE SCAM' || result.verdict === 'LIKELY SCAM';
+  const advice = eli5 && result.recommendation_simple ? result.recommendation_simple : result.recommendation;
 
   return (
     <div className="report" id="live-results">
@@ -89,10 +92,22 @@ export default function AuditResults({ result, onReset }) {
             <p className="kicker">AI security analysis</p>
             <h3 className={`tone-${vc.tone}`}>{vc.label}</h3>
             <p>{vc.desc}</p>
-            {result.recommendation && (
+            {advice && (
               <div className="summary">
-                <strong>AI summary</strong>
-                {result.recommendation}
+                <div className="summary-head">
+                  <strong>{eli5 ? 'Plain explanation' : 'AI summary'}</strong>
+                  {result.recommendation_simple && (
+                    <button
+                      type="button"
+                      className="eli5-toggle"
+                      aria-pressed={eli5}
+                      onClick={() => setEli5((on) => !on)}
+                    >
+                      {eli5 ? 'Show full advice' : 'Explain simply'}
+                    </button>
+                  )}
+                </div>
+                {advice}
               </div>
             )}
             {(result.red_flags?.length > 0 || result.green_flags?.length > 0) && (
@@ -112,7 +127,7 @@ export default function AuditResults({ result, onReset }) {
         </div>
       </section>
 
-      {showAdvisory && result.recommendation && (
+      {showAdvisory && advice && (
         <section className="advisory-panel" role="status">
           <div className="advisory-rail" aria-hidden="true" />
           <div className="advisory-body">
@@ -120,7 +135,7 @@ export default function AuditResults({ result, onReset }) {
               <span className="kicker" style={{ color: 'var(--danger)' }}>Active scam advisory</span>
               <span className="risk-chip tone-high">HIGH</span>
             </div>
-            <p>{result.recommendation}</p>
+            <p>{advice}</p>
           </div>
         </section>
       )}

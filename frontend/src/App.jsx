@@ -7,6 +7,8 @@ const Check = lazy(() => import('./pages/Check'));
 const Bulk = lazy(() => import('./pages/Bulk'));
 const History = lazy(() => import('./pages/History'));
 const Extension = lazy(() => import('./pages/Extension'));
+const SafetyGuide = lazy(() => import('./pages/SafetyGuide'));
+const Compare = lazy(() => import('./pages/Compare'));
 
 function PageFallback() {
   return (
@@ -36,6 +38,8 @@ export default function App() {
           <Route path="bulk" element={<Bulk />} />
           <Route path="history" element={<History />} />
           <Route path="extension" element={<Extension />} />
+          <Route path="safety-guide" element={<SafetyGuide />} />
+          <Route path="compare" element={<Compare />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
