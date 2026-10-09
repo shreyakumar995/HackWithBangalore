@@ -1884,9 +1884,9 @@ img { max-width: 100%; display: block; }
 }
 
 .safety-guide {
-  max-width: 760px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 36px 0 64px;
+  padding: 28px 0 72px;
 }
 
 .guide-hero h1 {
